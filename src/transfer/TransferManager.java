@@ -18,52 +18,58 @@ public class TransferManager {
 
     public static double measureRTT(InetAddress target, int port) throws IOException {
         long start = System.nanoTime();
-        try (DatagramSocket socket = new DatagramSocket()) {
-            socket.setSoTimeout(1000);
-            String ping = "SPEEDLAN:PING";
-            DatagramPacket packet = new DatagramPacket(ping.getBytes(), ping.length(), target, port);
-            socket.send(packet);
+        try (Socket socket = new Socket()) {
+            socket.connect(new InetSocketAddress(target, port), 2000);
+            socket.setSoTimeout(2000);
             
-            byte[] buffer = new byte[1024];
-            DatagramPacket response = new DatagramPacket(buffer, buffer.length);
-            socket.receive(response);
+            DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+            dos.writeUTF("SPEEDLAN:RTT");
+            dos.flush();
+            
+            DataInputStream dis = new DataInputStream(socket.getInputStream());
+            dis.readUTF();
+            
+            socket.close();
         }
         long end = System.nanoTime();
         return (end - start) / 1_000_000_000.0;
     }
 
     public static long measureBandwidth(InetAddress target, int port, int testSize) throws IOException {
-        try (ServerSocket serverSocket = new ServerSocket(0)) {
-            int serverPort = serverSocket.getLocalPort();
+        try (Socket socket = new Socket()) {
+            socket.connect(new InetSocketAddress(target, port), 2000);
+            socket.setSoTimeout(5000);
             
-            Thread acceptor = new Thread(() -> {
-                try {
-                    Socket client = serverSocket.accept();
-                    client.close();
-                } catch (IOException e) {}
-            });
-            acceptor.start();
+            OutputStream out = socket.getOutputStream();
+            InputStream in = socket.getInputStream();
             
-            try (Socket socket = new Socket()) {
-                socket.connect(new InetSocketAddress(target, port), 1000);
-                OutputStream out = socket.getOutputStream();
-                
-                long start = System.nanoTime();
-                byte[] data = new byte[testSize];
-                out.write(data);
-                out.flush();
-                socket.close();
-                long end = System.nanoTime();
-                
-                return (long) (testSize * 1_000_000_000.0 / (end - start));
-            }
+            DataOutputStream dos = new DataOutputStream(out);
+            dos.writeUTF("SPEEDLAN:BW");
+            dos.flush();
+            
+            long start = System.nanoTime();
+            byte[] data = new byte[testSize];
+            out.write(data);
+            out.flush();
+            
+            DataInputStream dis = new DataInputStream(in);
+            dis.readUTF();
+            
+            long end = System.nanoTime();
+            socket.close();
+            
+            return (long) (testSize * 1_000_000_000.0 / (end - start));
         }
     }
 
     public static void sendFile(File file, InetAddress target, int port, TransferProgress progress) 
             throws IOException {
+        sendFile(file, target, port, calculateChunkSize(100 * 1024 * 1024, 0.01), progress);
+    }
+    
+    public static void sendFile(File file, InetAddress target, int port, int chunkSize, TransferProgress progress) 
+            throws IOException {
         long fileSize = file.length();
-        int chunkSize = calculateChunkSize(100 * 1024 * 1024, 0.01);
         
         try (ServerSocket serverSocket = new ServerSocket(0)) {
             int serverPort = serverSocket.getLocalPort();

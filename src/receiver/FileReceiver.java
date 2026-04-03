@@ -2,6 +2,7 @@ package receiver;
 
 import java.io.*;
 import java.net.*;
+import java.nio.file.*;
 
 import config.Config;
 import transfer.TransferManager;
@@ -42,14 +43,47 @@ public class FileReceiver {
 
     private void handleConnection(Socket socket, String saveDirectory) {
         try {
-            System.out.println("Receiving file...");
-            TransferManager.receiveFile(socket, saveDirectory, (transferred, total) -> {
-                double percent = (transferred * 100.0) / total;
-                System.out.printf("\rProgress: %.1f%%", percent);
-            });
-            System.out.println("\nFile received successfully!");
+            DataInputStream dis = new DataInputStream(socket.getInputStream());
+            String command = dis.readUTF();
+            
+            if ("SPEEDLAN:RTT".equals(command)) {
+                DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+                dos.writeUTF("SPEEDLAN:RTT:ACK");
+                dos.flush();
+                socket.close();
+                return;
+            }
+            
+            if ("SPEEDLAN:BW".equals(command)) {
+                DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+                dos.writeUTF("SPEEDLAN:BW:ACK");
+                dos.flush();
+                socket.close();
+                return;
+            }
+            
+            String fileName = command;
+            long fileSize = dis.readLong();
+            int chunkSize = dis.readInt();
+            
+            System.out.println("Receiving: " + fileName + " (" + fileSize + " bytes)");
+            
+            File outputFile = Paths.get(saveDirectory, fileName).toFile();
+            
+            try (FileOutputStream fos = new FileOutputStream(outputFile)) {
+                byte[] buffer = new byte[chunkSize];
+                long transferred = 0;
+                int read;
+                while (transferred < fileSize && (read = dis.read(buffer)) != -1) {
+                    fos.write(buffer, 0, read);
+                    transferred += read;
+                    double percent = (transferred * 100.0) / fileSize;
+                    System.out.printf("\rProgress: %.1f%%", percent);
+                }
+            }
+            System.out.println("\nFile received: " + fileName);
         } catch (IOException e) {
-            System.err.println("Error receiving file: " + e.getMessage());
+            System.err.println("Error: " + e.getMessage());
         } finally {
             try { socket.close(); } catch (IOException e) {}
         }
