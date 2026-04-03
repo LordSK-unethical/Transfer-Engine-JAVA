@@ -1,0 +1,8 @@
+transfer\TransferManager.class
+receiver\FileReceiver.class
+config\Config.class
+transfer\TransferManager$TransferProgress.class
+network\Peer.class
+sender\FileSender.class
+cli\App.class
+network\DiscoveryService.class

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch4jConfig>
+    <dontUseNativeJavawLauncher>true</dontUseNativeJavawLauncher>
+    <headerType>console</headerType>
+    <jar>SpeedLAN.jar</jar>
+    <outfile>SpeedLAN.exe</outfile>
+    <errTitle>SpeedLAN</errTitle>
+    <classPath>
+        <mainClass>cli.App</mainClass>
+    </classPath>
+    <jre>
+        <minVersion>1.8.0</minVersion>
+        <runtimeBits>64</runtimeBits>
+    </jre>
+</launch4jConfig>
