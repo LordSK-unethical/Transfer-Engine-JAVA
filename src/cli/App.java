@@ -70,16 +70,8 @@ public class App {
             }
             
             System.out.println("Measuring network...");
-            double rtt;
-            long bandwidth;
-            try {
-                rtt = TransferManager.measureRTT(selectedPeer.address(), Config.TRANSFER_PORT);
-                bandwidth = TransferManager.measureBandwidth(selectedPeer.address(), Config.TRANSFER_PORT, 1024 * 1024);
-            } catch (Exception e) {
-                System.out.println("Could not measure network, using defaults");
-                rtt = 0.01;
-                bandwidth = 100 * 1024 * 1024;
-            }
+            double rtt = TransferManager.measureRTT(selectedPeer.address(), Config.TRANSFER_PORT);
+            long bandwidth = TransferManager.measureBandwidth(selectedPeer.address(), Config.TRANSFER_PORT, 1024 * 1024);
             
             int chunkSize = TransferManager.calculateChunkSize(bandwidth, rtt);
             System.out.println("RTT: " + (rtt * 1000) + "ms, Bandwidth: " + (bandwidth / (1024 * 1024)) + " MB/s");
