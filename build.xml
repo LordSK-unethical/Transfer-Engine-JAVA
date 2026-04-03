@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="SpeedLAN" default="compile">
+    <property name="src.dir" location="src"/>
+    <property name="build.dir" location="build"/>
+    <property name="classes.dir" location="${build.dir}/classes"/>
+    
+    <target name="compile">
+        <mkdir dir="${classes.dir}"/>
+        <javac srcdir="${src.dir}" destdir="${classes.dir}" includeantruntime="false"/>
+    </target>
+    
+    <target name="run" depends="compile">
+        <java classname="cli.App" fork="true">
+            <classpath>
+                <pathelement location="${classes.dir}"/>
+            </classpath>
+        </java>
+    </target>
+    
+    <target name="clean">
+        <delete dir="${build.dir}"/>
+    </target>
+</project>
