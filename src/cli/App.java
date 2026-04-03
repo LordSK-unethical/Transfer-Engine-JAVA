@@ -16,25 +16,46 @@ public class App {
     private static final String DEFAULT_SAVE_DIR = System.getProperty("user.home") + "/Downloads";
 
     public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
+        if (args.length == 0) {
+            printUsage();
+            return;
+        }
         
-        System.out.println("=== SpeedLAN File Transfer ===");
-        System.out.println("1. Send file");
-        System.out.println("2. Receive file");
-        System.out.print("Choose mode: ");
+        String mode = args[0].toLowerCase();
         
-        String choice = scanner.nextLine().trim();
-        
-        if ("1".equals(choice)) {
-            runSenderMode(scanner);
-        } else if ("2".equals(choice)) {
-            runReceiverMode(scanner);
+        if ("send".equals(mode)) {
+            if (args.length < 2) {
+                System.out.println("Error: File path required for send mode");
+                printUsage();
+                return;
+            }
+            runSenderMode(args[1]);
+        } else if ("receive".equals(mode)) {
+            String saveDir = args.length > 1 ? args[1] : DEFAULT_SAVE_DIR;
+            runReceiverMode(saveDir);
         } else {
-            System.out.println("Invalid choice");
+            printUsage();
         }
     }
 
-    private static void runSenderMode(Scanner scanner) {
+    private static void printUsage() {
+        System.out.println("Usage:");
+        System.out.println("  java -jar SpeedLAN.jar Send <file-path>");
+        System.out.println("  java -jar SpeedLAN.jar Receive [save-directory]");
+        System.out.println("");
+        System.out.println("Examples:");
+        System.out.println("  java -jar SpeedLAN.jar Send C:\\path\\to\\file.txt");
+        System.out.println("  java -jar SpeedLAN.jar Receive");
+        System.out.println("  java -jar SpeedLAN.jar Receive C:\\Users\\Shadow\\Downloads");
+    }
+
+    private static void runSenderMode(String filePath) {
+        File file = new File(filePath);
+        if (!file.exists() || !file.isFile()) {
+            System.out.println("Error: Invalid file - " + filePath);
+            return;
+        }
+
         try (DiscoveryService discovery = new DiscoveryService(DEVICE_NAME)) {
             discovery.start();
             System.out.println("Searching for receivers...");
@@ -51,7 +72,8 @@ public class App {
                 System.out.println((i + 1) + ". " + peers.get(i));
             }
             
-            System.out.print("\nSelect receiver: ");
+            System.out.print("\nSelect receiver (number): ");
+            Scanner scanner = new Scanner(System.in);
             int choice = Integer.parseInt(scanner.nextLine().trim()) - 1;
             if (choice < 0 || choice >= peers.size()) {
                 System.out.println("Invalid selection");
@@ -59,15 +81,6 @@ public class App {
             }
             
             Peer selectedPeer = peers.get(choice);
-            
-            System.out.print("Enter file path: ");
-            String filePath = scanner.nextLine().trim();
-            File file = new File(filePath);
-            
-            if (!file.exists() || !file.isFile()) {
-                System.out.println("Invalid file");
-                return;
-            }
             
             System.out.println("Starting transfer...");
             int chunkSize = TransferManager.calculateChunkSize(100 * 1024 * 1024, 0.01);
@@ -82,16 +95,11 @@ public class App {
             
         } catch (Exception e) {
             System.err.println("Error: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
-    private static void runReceiverMode(Scanner scanner) {
-        System.out.print("Save directory [" + DEFAULT_SAVE_DIR + "]: ");
-        String saveDir = scanner.nextLine().trim();
-        if (saveDir.isEmpty()) {
-            saveDir = DEFAULT_SAVE_DIR;
-        }
-        
+    private static void runReceiverMode(String saveDir) {
         try {
             Files.createDirectories(Paths.get(saveDir));
         } catch (IOException e) {
@@ -105,15 +113,15 @@ public class App {
             FileReceiver receiver = new FileReceiver(DEVICE_NAME);
             receiver.start(saveDir);
             
-            System.out.println("\nPress Enter to stop...");
-            scanner.nextLine();
+            System.out.println("Receiver running. Press Ctrl+C to stop.");
             
-            receiver.stop();
-            discovery.close();
-            System.out.println("Receiver stopped.");
+            Thread.currentThread().join();
             
+        } catch (InterruptedException e) {
+            System.out.println("\nReceiver stopped.");
         } catch (Exception e) {
             System.err.println("Error: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }
