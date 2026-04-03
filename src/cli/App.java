@@ -69,12 +69,8 @@ public class App {
                 return;
             }
             
-            System.out.println("Measuring network...");
-            double rtt = TransferManager.measureRTT(selectedPeer.address(), Config.TRANSFER_PORT);
-            long bandwidth = TransferManager.measureBandwidth(selectedPeer.address(), Config.TRANSFER_PORT, 1024 * 1024);
-            
-            int chunkSize = TransferManager.calculateChunkSize(bandwidth, rtt);
-            System.out.println("RTT: " + (rtt * 1000) + "ms, Bandwidth: " + (bandwidth / (1024 * 1024)) + " MB/s");
+            System.out.println("Starting transfer...");
+            int chunkSize = TransferManager.calculateChunkSize(100 * 1024 * 1024, 0.01);
             System.out.println("Chunk size: " + (chunkSize / 1024) + " KB");
             
             TransferManager.sendFile(file, selectedPeer.address(), Config.TRANSFER_PORT, chunkSize, (transferred, total) -> {
